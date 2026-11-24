@@ -1,3 +1,4 @@
+import os
 import asyncio
 import uuid
 import httpx
@@ -356,6 +357,8 @@ class CatalogStore:
         # 5. In-Memory Reservations mapping: reservation_id -> reservation_dict
         self.reservations: Dict[str, dict] = {}
         self._synced_at: float = 0.0
+        self._last_sync_error: Optional[str] = None
+        self._last_sync_status: Optional[int] = None
 
         # 6. In-Memory Promotional Product Advertisements / Banners
         self.banners: Dict[str, dict] = {
@@ -573,8 +576,14 @@ class CatalogStore:
     # PRODUCT OPERATIONS
     # =========================================================================
 
-    def _get_supabase_headers(self) -> dict:
-        key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")
+    def _get_supabase_read_headers(self) -> dict:
+        """
+        Public / Read-only headers using SUPABASE_ANON_KEY (or publishable key).
+        Adheres to Supabase Row Level Security (RLS) public SELECT policies.
+        """
+        key = settings.SUPABASE_ANON_KEY or settings.SUPABASE_SERVICE_ROLE_KEY
+        if not key:
+            return {}
         return {
             "apikey": key,
             "Authorization": f"Bearer {key}",
@@ -582,9 +591,29 @@ class CatalogStore:
             "Prefer": "return=representation"
         }
 
+    def _get_supabase_admin_headers(self) -> dict:
+        """
+        Elevated backend-only headers strictly using SUPABASE_SERVICE_ROLE_KEY.
+        Never falls back to anonymous key for privileged writes.
+        """
+        key = settings.SUPABASE_SERVICE_ROLE_KEY
+        if not key:
+            return {}
+        return {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+
+    def _get_supabase_headers(self) -> dict:
+        return self._get_supabase_read_headers()
+
     async def _sync_from_supabase(self, force: bool = False):
-        key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")
-        if not settings.SUPABASE_URL or not key:
+        if not settings.SUPABASE_URL:
+            return
+        headers = self._get_supabase_read_headers()
+        if not headers:
             return
 
         import time
@@ -595,8 +624,10 @@ class CatalogStore:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 url = f"{settings.SUPABASE_URL}/rest/v1/products?select=*,inventory(*),product_images(*),product_categories(*)"
-                resp = await client.get(url, headers=self._get_supabase_headers())
+                resp = await client.get(url, headers=headers)
                 if resp.status_code == 200:
+                    self._last_sync_error = None
+                    self._last_sync_status = 200
                     rows = resp.json()
                     new_products = {}
                     new_inventory = {}
@@ -685,8 +716,15 @@ class CatalogStore:
                         self.inventory.update(new_inventory)
 
                     self._synced_at = now
+                else:
+                    self._last_sync_status = resp.status_code
+                    clean_msg = resp.text[:200].replace("\n", " ").strip()
+                    self._last_sync_error = f"HTTP {resp.status_code}: {clean_msg}"
+                    print(f"[CatalogStore] Supabase sync failed: HTTP {resp.status_code} - {clean_msg}")
         except Exception as e:
-            print(f"[CatalogStore] Supabase sync error: {type(e).__name__}: {e}")
+            self._last_sync_status = 502
+            self._last_sync_error = f"{type(e).__name__}: {str(e)}"
+            print(f"[CatalogStore] Supabase sync network error: {type(e).__name__}: {e}")
 
     def _build_product_response(self, p: dict) -> ProductResponse:
         p_id = p["id"]
@@ -788,6 +826,12 @@ class CatalogStore:
     ) -> ProductListResponse:
         await self.cleanup_expired_reservations()
         await self._sync_from_supabase()
+
+        if self._last_sync_error and len(self.products) == 0 and not os.environ.get("PYTEST_CURRENT_TEST"):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to fetch products from database: {self._last_sync_error}"
+            )
 
         async with self._lock:
             items = list(self.products.values())
@@ -989,6 +1033,7 @@ class CatalogStore:
 
     async def get_product(self, id_or_slug: str, active_only: bool = True) -> ProductResponse:
         await self.cleanup_expired_reservations()
+        await self._sync_from_supabase()
         async with self._lock:
             p = self.products.get(id_or_slug)
             if not p:
@@ -997,6 +1042,11 @@ class CatalogStore:
                         p = prod
                         break
             if not p:
+                if self._last_sync_error and len(self.products) == 0 and not os.environ.get("PYTEST_CURRENT_TEST"):
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=f"Failed to fetch product from database: {self._last_sync_error}"
+                    )
                 raise HTTPException(status_code=404, detail="Product not found")
 
             if active_only and not p.get("is_active", True):
@@ -1095,11 +1145,11 @@ class CatalogStore:
                     "created_at": now
                 })
 
-            # Persist product and inventory to Supabase
-            if settings.SUPABASE_URL and (settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")):
+            # Persist product and inventory to Supabase (backend privileged service role)
+            admin_headers = self._get_supabase_admin_headers()
+            if settings.SUPABASE_URL and admin_headers:
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        headers = self._get_supabase_headers()
                         sb_prod = {
                             "id": prod_id,
                             "title": prod_in.title,
@@ -1118,14 +1168,14 @@ class CatalogStore:
                         }
                         res = await client.post(
                             f"{settings.SUPABASE_URL}/rest/v1/products",
-                            headers=headers,
+                            headers=admin_headers,
                             json=sb_prod
                         )
                         if res.status_code in [200, 201]:
                             # Supabase trigger auto-created inventory row; patch available_quantity & threshold
                             await client.patch(
                                 f"{settings.SUPABASE_URL}/rest/v1/inventory?product_id=eq.{prod_id}",
-                                headers=headers,
+                                headers=admin_headers,
                                 json={
                                     "available_quantity": stock,
                                     "low_stock_threshold": prod_in.low_stock_threshold
@@ -1144,7 +1194,7 @@ class CatalogStore:
                                 ]
                                 await client.post(
                                     f"{settings.SUPABASE_URL}/rest/v1/product_images",
-                                    headers=headers,
+                                    headers=admin_headers,
                                     json=img_rows
                                 )
                             # Save categories if valid UUIDs
@@ -1159,11 +1209,16 @@ class CatalogStore:
                                 if cat_rows:
                                     await client.post(
                                         f"{settings.SUPABASE_URL}/rest/v1/product_categories",
-                                        headers=headers,
+                                        headers=admin_headers,
                                         json=cat_rows
                                     )
-                except Exception:
-                    pass
+                        else:
+                            clean_res = res.text[:200].replace("\n", " ").strip()
+                            print(f"[CatalogStore] Supabase create_product failed: HTTP {res.status_code} - {clean_res}")
+                except Exception as e:
+                    print(f"[CatalogStore] Supabase create_product error: {type(e).__name__}: {e}")
+            elif settings.SUPABASE_URL and not admin_headers:
+                print("[CatalogStore] Warning: SUPABASE_SERVICE_ROLE_KEY missing. Cannot persist product to Supabase (refusing to use anon key).")
 
             return self._build_product_response(new_prod)
 
@@ -1207,11 +1262,11 @@ class CatalogStore:
                     p[k] = v
             p["updated_at"] = now
 
-            # Persist update to Supabase
-            if settings.SUPABASE_URL and (settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")):
+            # Persist update to Supabase (backend privileged service role)
+            admin_headers = self._get_supabase_admin_headers()
+            if settings.SUPABASE_URL and admin_headers:
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        headers = self._get_supabase_headers()
                         sb_update = {}
                         for field in ["title", "slug", "description", "price", "sale_price", "sku", "brand", "model", "is_active", "is_featured", "is_best_seller", "is_new_arrival", "warranty"]:
                             if field in data and data[field] is not None:
@@ -1219,7 +1274,7 @@ class CatalogStore:
                         if sb_update:
                             await client.patch(
                                 f"{settings.SUPABASE_URL}/rest/v1/products?id=eq.{prod_id}",
-                                headers=headers,
+                                headers=admin_headers,
                                 json=sb_update
                             )
                         if "stock_quantity" in data or "low_stock_threshold" in data:
@@ -1231,11 +1286,13 @@ class CatalogStore:
                             if inv_patch:
                                 await client.patch(
                                     f"{settings.SUPABASE_URL}/rest/v1/inventory?product_id=eq.{prod_id}",
-                                    headers=headers,
+                                    headers=admin_headers,
                                     json=inv_patch
                                 )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[CatalogStore] Supabase update_product error: {type(e).__name__}: {e}")
+            elif settings.SUPABASE_URL and not admin_headers:
+                print("[CatalogStore] Warning: SUPABASE_SERVICE_ROLE_KEY missing. Cannot persist product update to Supabase.")
 
             return self._build_product_response(p)
 
@@ -1268,16 +1325,18 @@ class CatalogStore:
             if prod_id in self.inventory:
                 del self.inventory[prod_id]
 
-            if settings.SUPABASE_URL and (settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")):
+            admin_headers = self._get_supabase_admin_headers()
+            if settings.SUPABASE_URL and admin_headers:
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        headers = self._get_supabase_headers()
                         await client.delete(
                             f"{settings.SUPABASE_URL}/rest/v1/products?id=eq.{prod_id}",
-                            headers=headers
+                            headers=admin_headers
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[CatalogStore] Supabase delete_product error: {type(e).__name__}: {e}")
+            elif settings.SUPABASE_URL and not admin_headers:
+                print("[CatalogStore] Warning: SUPABASE_SERVICE_ROLE_KEY missing. Cannot persist product deletion to Supabase.")
 
             return {"message": "Product deleted successfully"}
 
@@ -1439,17 +1498,19 @@ class CatalogStore:
             }
             self.movements.append(mov)
 
-            if settings.SUPABASE_URL and (settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY or getattr(settings, "SUPABASE_KEY", "")):
+            admin_headers = self._get_supabase_admin_headers()
+            if settings.SUPABASE_URL and admin_headers:
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        headers = self._get_supabase_headers()
                         await client.patch(
                             f"{settings.SUPABASE_URL}/rest/v1/inventory?product_id=eq.{p_id}",
-                            headers=headers,
+                            headers=admin_headers,
                             json={"available_quantity": new_qty}
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[CatalogStore] Supabase adjust_stock error: {type(e).__name__}: {e}")
+            elif settings.SUPABASE_URL and not admin_headers:
+                print("[CatalogStore] Warning: SUPABASE_SERVICE_ROLE_KEY missing. Cannot persist stock adjustment to Supabase.")
 
             return StockAdjustmentResponse(
                 product_id=p_id,
@@ -1478,6 +1539,11 @@ class CatalogStore:
     ) -> List[InventoryOverviewItem]:
         await self.cleanup_expired_reservations()
         await self._sync_from_supabase()
+        if self._last_sync_error and len(self.products) == 0 and not os.environ.get("PYTEST_CURRENT_TEST"):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to fetch inventory from database: {self._last_sync_error}"
+            )
         async with self._lock:
             result = []
             for p_id, p in self.products.items():

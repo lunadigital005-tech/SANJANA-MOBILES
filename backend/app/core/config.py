@@ -30,12 +30,17 @@ class Settings(BaseSettings):
     STORE_CURRENCY: str = "INR"
     STORE_CURRENCY_SYMBOL: str = "₹"
     
-    # Supabase Credentials
+    # Supabase Credentials (Strict separation of anon read vs privileged service-role)
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", os.getenv("SUPABASE_KEY", ""))
-    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
+    SUPABASE_ANON_KEY: str = (
+        os.getenv("SUPABASE_ANON_KEY")
+        or os.getenv("SUPABASE_PUBLISHABLE_KEY")
+        or os.getenv("VITE_SUPABASE_ANON_KEY")
+        or ""
+    )
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_ANON_KEY", "")))
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
     
     # Razorpay Credentials (Test mode default for safe development & verification)
     RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_test_sanjana_default_key")
