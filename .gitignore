@@ -4,9 +4,11 @@
 **/.env
 **/.env.*
 
-# Allow safe example files
+# Allow safe example and client environment templates
 !.env.example
 !**/.env.example
+!frontend/.env.production
+!frontend/.env.development
 
 # Node
 node_modules/

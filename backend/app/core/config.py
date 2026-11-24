@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     CORS_ORIGINS: List[str] = [
+        "https://sanjana-mobiles.vercel.app",
+        "https://sanjana-mobiles.onrender.com",
         "http://localhost:5173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
@@ -51,11 +53,16 @@ class Settings(BaseSettings):
     ]
 
     def get_cors_origins(self) -> List[str]:
+        origins = list(self.CORS_ORIGINS)
         env_cors = os.getenv("CORS_ORIGINS", "").strip()
         if not env_cors:
-            return self.CORS_ORIGINS
+            return origins
         if env_cors == "*":
             return ["*"]
-        return [origin.strip() for origin in env_cors.split(",") if origin.strip()]
+        for origin in env_cors.split(","):
+            cleaned = origin.strip()
+            if cleaned and cleaned not in origins:
+                origins.append(cleaned)
+        return origins
 
 settings = Settings()

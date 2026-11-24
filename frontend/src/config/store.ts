@@ -113,7 +113,20 @@ export const storeConfig: StoreConfig = {
     qrCodeImageUrl: "",
     paymentInstructions: "1. Scan the QR code using Google Pay, PhonePe, Paytm, or any UPI app on your phone.\n2. Or tap 'Pay with UPI' on supported Android mobile devices.\n3. Complete the payment for the exact order amount.\n4. Enter the 12-digit UPI Transaction Reference Number (UTR) below and submit for verification.",
   },
-  apiBaseUrl: (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1").replace(/\/+$/, ""),
+  apiBaseUrl: (() => {
+    const rawEnv = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim();
+    if (rawEnv) {
+      // In production builds, guard against accidental localhost URLs
+      if (import.meta.env.PROD && (rawEnv.includes('localhost') || rawEnv.includes('127.0.0.1'))) {
+        return 'https://sanjana-mobiles.onrender.com/api/v1';
+      }
+      const withoutSlash = rawEnv.replace(/\/+$/, '');
+      return withoutSlash.endsWith('/api/v1') ? withoutSlash : `${withoutSlash}/api/v1`;
+    }
+    return import.meta.env.PROD
+      ? 'https://sanjana-mobiles.onrender.com/api/v1'
+      : 'http://localhost:8000/api/v1';
+  })(),
 };
 
 /** Alias for backward compatibility */

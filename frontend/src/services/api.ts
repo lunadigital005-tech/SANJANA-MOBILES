@@ -31,7 +31,7 @@ import {
   Invoice
 } from '../types';
 
-const BASE_URL = (storeConfig.apiBaseUrl || "http://localhost:8000/api/v1").replace(/\/+$/, "");
+const BASE_URL = (storeConfig.apiBaseUrl || (import.meta.env.PROD ? "https://sanjana-mobiles.onrender.com/api/v1" : "http://localhost:8000/api/v1")).replace(/\/+$/, "");
 
 export const api = {
   // ==========================================
