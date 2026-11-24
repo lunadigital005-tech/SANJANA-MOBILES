@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-plum: #21132B;
+    --color-coral: #FF6B4A;
+    --color-mint: #DDF4E7;
+    --color-ivory: #F8F6F0;
+  }
+
+  body {
+    @apply bg-ivory text-plum-900 font-sans antialiased selection:bg-coral-100 selection:text-coral-900;
+    min-height: 100vh;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F8F6F0;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #DDD1E6;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9B74B2;
+  }
+
+  /* Dark Admin Scrollbar */
+  .admin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #3b224c #170d1e;
+  }
+  .admin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .admin-scrollbar::-webkit-scrollbar-track {
+    background: #170d1e;
+  }
+  .admin-scrollbar::-webkit-scrollbar-thumb {
+    background: #3b224c;
+    border-radius: 9999px;
+  }
+  .admin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #FF6B4A;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 15mm;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  header, nav, footer, .no-print, button {
+    display: none !important;
+  }
+  #invoice-printable-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

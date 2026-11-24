@@ -1,0 +1,36 @@
+{
+  "payment_settings": {
+    "upi_id": "sanjanamobiles@oksbi",
+    "merchant_name": "SANJANA MOBILES STORE",
+    "qr_code_image_url": "https://example.com/qr.png",
+    "qr_code_url": "https://example.com/qr.png",
+    "payment_instructions": "1. Scan the QR code using Google Pay, PhonePe, Paytm, or any UPI app.\n2. Or tap 'Pay with UPI' on supported Android devices.\n3. Complete the transfer for the exact order amount.\n4. Enter the 12-digit UPI Reference Number / UTR below and submit for verification.",
+    "instructions": "1. Scan the QR code using Google Pay, PhonePe, Paytm, or any UPI app.\n2. Or tap 'Pay with UPI' on supported Android devices.\n3. Complete the transfer for the exact order amount.\n4. Enter the 12-digit UPI Reference Number / UTR below and submit for verification.",
+    "is_upi_enabled": true,
+    "require_manual_verification": true,
+    "manual_verification_required": true,
+    "updated_at": "2026-11-24T07:57:19.237462+00:00"
+  },
+  "store_settings": {
+    "store_name": "SANJANA MOBILES CHENNAI BRANCH",
+    "tagline": "Your Trusted Destination for Genuine Mobiles & Accessories",
+    "address_line1": "New Door 99, GST Road",
+    "address_line2": "Near Metro Pillar 42, Indiranagar",
+    "city": "Chennai",
+    "district": "Bengaluru Urban",
+    "state": "Tamil Nadu",
+    "pin_code": "600028",
+    "country": "India",
+    "store_mobile": "9840112233",
+    "store_email": "chennai@sanjanamobiles.com",
+    "google_maps_url": "https://maps.google.com/?q=12.9716,77.5946",
+    "free_shipping_threshold": 799.0,
+    "business_hours": "Mon - Sat: 10:00 AM - 9:00 PM | Sun: 11:00 AM - 8:00 PM",
+    "name": "SANJANA MOBILES",
+    "phone": "9876543210",
+    "email": "contact@sanjanamobiles.com",
+    "address": "100 Feet Road, Near Metro Pillar 42, Indiranagar, Bengaluru, Karnataka 560038",
+    "updated_at": "2026-11-24T07:56:21.669589+00:00"
+  },
+  "saved_at": "2026-11-24T07:57:20.002863+00:00"
+}

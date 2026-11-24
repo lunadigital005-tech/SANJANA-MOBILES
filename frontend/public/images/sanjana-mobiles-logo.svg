@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" width="100%" height="100%">
+  <defs>
+    <!-- Background Squircle Gradient for the Icon -->
+    <linearGradient id="iconBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D1A3B"/>
+      <stop offset="100%" stop-color="#180C21"/>
+    </linearGradient>
+
+    <!-- Coral Tech Gradient -->
+    <linearGradient id="coralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8264"/>
+      <stop offset="50%" stop-color="#FF6B4A"/>
+      <stop offset="100%" stop-color="#E04D2D"/>
+    </linearGradient>
+
+    <!-- Mint Energy Gradient -->
+    <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="60%" stop-color="#DDF4E7"/>
+      <stop offset="100%" stop-color="#A8E2C1"/>
+    </linearGradient>
+
+    <linearGradient id="bezelBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B4A" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF6B4A" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ICON SECTION (Scale & Position: 0 to 90px) -->
+  <g transform="translate(6, 6) scale(0.44)">
+    <!-- Outer Phone-Inspired Squircle Container -->
+    <rect x="12" y="12" width="176" height="176" rx="42" fill="url(#iconBgGrad)" stroke="url(#bezelBorder)" stroke-width="3"/>
+    
+    <!-- Top Mobile Speaker / Earpiece -->
+    <rect x="82" y="24" width="36" height="4" rx="2" fill="#DDF4E7" opacity="0.4"/>
+    
+    <!-- Punch Hole Camera Dot with Coral Ring -->
+    <circle cx="100" cy="38" r="3.5" fill="#180C21" stroke="#FF6B4A" stroke-width="1.5"/>
+
+    <!-- Master "S" Mobile Ribbon -->
+    <path d="M 148 64 C 148 50 134 44 116 44 L 84 44 C 62 44 48 58 48 80 C 48 102 62 112 86 118 L 114 125 C 130 129 138 135 138 144 C 138 156 126 162 108 162 L 72 162 C 54 162 48 152 48 152" 
+          fill="none" 
+          stroke="url(#coralGrad)" 
+          stroke-width="18" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+
+    <!-- Inner Dynamic Tech S-Core (Mint Accents) -->
+    <path d="M 148 64 C 148 50 134 44 116 44 L 98 44" fill="none" stroke="url(#mintGrad)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 102 162 L 72 162 C 54 162 48 152 48 152" fill="none" stroke="url(#mintGrad)" stroke-width="5" stroke-linecap="round"/>
+
+    <!-- Mobile Connectivity Dots -->
+    <circle cx="152" cy="94" r="3.5" fill="#DDF4E7" opacity="0.9"/>
+    <circle cx="158" cy="106" r="2.5" fill="#FF6B4A" opacity="0.8"/>
+    <circle cx="152" cy="118" r="3.5" fill="#DDF4E7" opacity="0.9"/>
+
+    <!-- Bottom Home Bar Indicator -->
+    <rect x="75" y="176" width="50" height="4" rx="2" fill="#DDF4E7" opacity="0.5"/>
+  </g>
+
+  <!-- TYPOGRAPHY SECTION (Light Background Variant) -->
+  <g transform="translate(108, 0)">
+    <!-- Primary Wordmark: SANJANA MOBILES -->
+    <text x="0" y="46" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#21132B" letter-spacing="1.5">
+      SANJANA
+      <tspan fill="#FF6B4A" dx="8">MOBILES</tspan>
+    </text>
+
+    <!-- Subtitle: SMARTPHONES & ACCESSORIES -->
+    <text x="2" y="70" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#715B80" letter-spacing="3.5">
+      SMARTPHONES • ACCESSORIES • CARE
+    </text>
+
+    <!-- Modern Tech Accent Pill -->
+    <rect x="2" y="80" width="48" height="3" rx="1.5" fill="#FF6B4A"/>
+    <circle cx="56" cy="81.5" r="2" fill="#21132B"/>
+    <circle cx="64" cy="81.5" r="1.5" fill="#FF6B4A"/>
+  </g>
+</svg>

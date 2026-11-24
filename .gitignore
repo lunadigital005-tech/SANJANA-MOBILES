@@ -1,0 +1,23 @@
+# Environment secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Allow safe example files
+!.env.example
+!**/.env.example
+
+# Node
+node_modules/
+dist/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Build files
+*.log
+.DS_Store
